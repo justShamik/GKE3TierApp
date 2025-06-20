@@ -11,7 +11,7 @@ metadata:
 spec:
   ingressClassName: alb
   rules:
-    - host: RSAassesment.shamik
+    - host: assesment.shamik
       http:
         paths:
           - path: /api
