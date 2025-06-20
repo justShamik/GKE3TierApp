@@ -22,13 +22,13 @@ spec:
         role: frontend
     spec: 
       imagePullSecrets:
-      - name: ecr-registry-secret
+      - name: gcr-registry-secret
       containers:
       - name: frontend
-        image: 407622020962.dkr.ecr.us-east-1.amazonaws.com/frontend:3
+        image: us-central1-docker.pkg.dev/white-welder-463307-r7/frontend/frontend:1
         imagePullPolicy: Always
         env:
           - name: REACT_APP_BACKEND_URL
-            value: "http://amanpathakdevops.study/api/tasks"
+            value: "http://RSAassesment.shamik/api/tasks"
         ports:
         - containerPort: 3000

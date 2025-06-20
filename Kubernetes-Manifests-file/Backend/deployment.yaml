@@ -22,10 +22,10 @@ spec:
         role: api
     spec:
       imagePullSecrets:
-      - name: ecr-registry-secret
+      - name: gcr-registry-secret
       containers:
       - name: api
-        image: 407622020962.dkr.ecr.us-east-1.amazonaws.com/backend:1
+        image: us-central1-docker.pkg.dev/white-welder-463307-r7/backend/backend:13
         imagePullPolicy: Always
         env:
           - name: MONGO_CONN_STR
