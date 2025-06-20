@@ -1,0 +1,64 @@
+pipeline {
+    agent any 
+
+    tools {
+        nodejs 'nodejs' 
+    }
+
+    environment {
+        GCP_ACCOUNT_ID = credentials('ACCOUNT_ID') 
+        REPO_NAME = 'frontend'
+        GCP_DEFAULT_REGION = 'us-central1'
+    }
+
+    stages {
+        stage('Init Variables') {
+            steps {
+                script {
+                    env.REPOSITORY_URI = "${env.GCP_DEFAULT_REGION}-docker.pkg.dev/${env.GCP_ACCOUNT_ID}/${env.REPO_NAME}"
+                    echo "Using repository: ${env.REPOSITORY_URI}"
+                }
+            }
+        }
+
+        stage('Cleaning Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Checkout from Git') {
+            steps {
+                git branch: 'main', credentialsId: 'github-credentials-id', url: 'https://github.com/justShamik/GKE3TierApp.git'
+            }
+        }
+
+        stage("Docker Image Build") {
+            steps {
+                script {
+                    dir('Application-Code/frontend') {
+                        sh 'docker system prune -f'
+                        sh 'docker container prune -f'
+                        sh "docker build -t ${env.REPO_NAME}:${env.BUILD_NUMBER} ."
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Image to GAR') {
+            steps {
+                withCredentials([file(credentialsId: 'gcp-service-account-json', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    script {
+                        sh """
+                            gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+                            gcloud auth configure-docker ${GCP_DEFAULT_REGION}-docker.pkg.dev --quiet
+                            docker tag frontend:${BUILD_NUMBER} ${REPOSITORY_URI}/frontend:${BUILD_NUMBER}
+                            docker push ${REPOSITORY_URI}/frontend:${BUILD_NUMBER}
+                        """
+                    }
+                }
+            }
+        }
+
+    }
+}
