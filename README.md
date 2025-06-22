@@ -78,11 +78,12 @@ helm install ingress-nginx ingress-nginx/ingress-nginx \
   --namespace ingress-nginx \
   --set controller.service.type=LoadBalancer \
   --set controller.publishService.enabled=true
-
+```
 
 
 
 🗂️ Repository Structure
+```
 .
 ├── Application-Code/
 │   ├── frontend/
