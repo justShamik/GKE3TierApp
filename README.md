@@ -31,10 +31,10 @@ Run this on your bastion VM or admin machine connected to GCP:
 set -e
 
 # Variables (update these before running)
-PROJECT_ID="white-welder-463307-r7"
-CLUSTER_NAME="democluster"
-REGION="us-central1"
-GCP_USER_EMAIL="onlyshamik@gmail.com"  # <-- Replace with your actual email
+PROJECT_ID="<YOUR_PROJECT_NAME>"
+CLUSTER_NAME="<YOUR_CLUSTER_NAME>"
+REGION="us-central1"   <-- Replace with your actual REGION
+GCP_USER_EMAIL="ABC@gmail.com"  # <-- Replace with your actual email
 GCP_SERVICE_ACCOUNT="gke-lb-controller@$PROJECT_ID.iam.gserviceaccount.com"
 
 # Install Kubeclt
