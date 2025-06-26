@@ -33,7 +33,7 @@ set -e
 # Variables (update these before running)
 PROJECT_ID="<YOUR_PROJECT_NAME>"
 CLUSTER_NAME="<YOUR_CLUSTER_NAME>"
-REGION="us-central1"   <-- Replace with your actual REGION
+REGION="us-central1"   #<-- Replace with your actual REGION
 GCP_USER_EMAIL="ABC@gmail.com"  # <-- Replace with your actual email
 GCP_SERVICE_ACCOUNT="gke-lb-controller@$PROJECT_ID.iam.gserviceaccount.com"
 
