@@ -26,58 +26,87 @@ Ensure the following tools and permissions are set up.
 Run this on your bastion VM or admin machine connected to GCP:
 
 ```bash
-# Install GKE Auth Plugin
+#!/bin/bash
+
+set -e
+
+# Variables (update these before running)
+PROJECT_ID="white-welder-463307-r7"
+CLUSTER_NAME="democluster"
+REGION="us-central1"
+GCP_USER_EMAIL="onlyshamik@gmail.com"  # <-- Replace with your actual email
+GCP_SERVICE_ACCOUNT="gke-lb-controller@$PROJECT_ID.iam.gserviceaccount.com"
+
+# Install Kubeclt
+sudo apt-get update
+sudo apt-get install kubectl
+
+echo "Installing GKE Auth Plugin..."
+sudo apt-get update
 sudo apt-get install google-cloud-sdk-gke-gcloud-auth-plugin -y
 
-# Authenticate with GCP
+echo "Authenticating with GCP..."
 gcloud auth login
 
-# Fetch GKE Cluster Credentials
-gcloud container clusters get-credentials democluster \
-  --region us-central1 \
-  --project white-welder-463307-r7
+echo "Fetching GKE cluster credentials..."
+gcloud container clusters get-credentials "$CLUSTER_NAME" \
+  --region "$REGION" \
+  --project "$PROJECT_ID"
 
-# Create a Kubernetes service account for GKE Load Balancer controller
-kubectl create sa gke-lb-controller -n kube-system
+echo "Creating Kubernetes service account for LB Controller..."
+kubectl create sa gke-lb-controller -n kube-system || true
 kubectl annotate serviceaccount gke-lb-controller -n kube-system \
-  iam.gke.io/gcp-service-account=gke-lb-controller@white-welder-463307-r7.iam.gserviceaccount.com
+  "iam.gke.io/gcp-service-account=$GCP_SERVICE_ACCOUNT" --overwrite
 
-# Install Helm
-curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+echo "Installing Helm..."
+curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | \
+  sudo tee /usr/share/keyrings/helm.gpg > /dev/null
 sudo apt-get install apt-transport-https --yes
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" \
   | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
 sudo apt-get update
 sudo apt-get install helm -y
 
-# Assign cluster-admin role (use your email)
+echo "Assigning cluster-admin role to $GCP_USER_EMAIL..."
 kubectl create clusterrolebinding cluster-admin-binding \
   --clusterrole=cluster-admin \
-  --user=<youremail>
+  --user="$GCP_USER_EMAIL" || true
 
-# Configure ArgoCD
-kubectl create ns argocd
+echo "Deploying ArgoCD..."
+kubectl create ns argocd || true
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.4.7/manifests/install.yaml
 kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
 
-# Install jq (for parsing ArgoCD outputs)
+echo "Installing jq..."
 sudo apt install jq -y
 
-# Get ArgoCD server details
-export ARGOCD_SERVER=$(kubectl get svc argocd-server -n argocd -o json | jq -r '.status.loadBalancer.ingress[0].hostname')
-export ARGO_PWD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
-echo $ARGO_PWD
+echo "Waiting for ArgoCD external IP..."
+while true; do
+  ARGOCD_SERVER=$(kubectl get svc argocd-server -n argocd -o json | jq -r '.status.loadBalancer.ingress[0].ip')
+  if [[ "$ARGOCD_SERVER" != "null" && -n "$ARGOCD_SERVER" ]]; then
+    break
+  fi
+  echo "Waiting for LoadBalancer IP..."
+  sleep 10
+done
+echo "ArgoCD available at: $ARGOCD_SERVER"
 
-# Install ingress-nginx controller via Helm
+echo "Fetching ArgoCD admin password..."
+ARGO_PWD=$(kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath="{.data.password}" | base64 -d)
+echo "ArgoCD password: $ARGO_PWD"
+
+echo "Installing ingress-nginx via Helm..."
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 helm repo update
-
-kubectl create namespace ingress-nginx
+kubectl create namespace ingress-nginx || true
 
 helm install ingress-nginx ingress-nginx/ingress-nginx \
   --namespace ingress-nginx \
   --set controller.service.type=LoadBalancer \
   --set controller.publishService.enabled=true
+
+echo "Setup complete."
 ```
 
 
